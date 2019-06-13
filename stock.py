@@ -1,1 +1,1 @@
-print("Core Connect")
+print "Core Connect"
