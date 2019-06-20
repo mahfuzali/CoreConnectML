@@ -1,14 +1,48 @@
 from pandas_datareader import data as web
+from sklearn import preprocessing
+from sklearn import model_selection
+from sklearn import linear_model
 import datetime as dt
 import math
 import numpy as np 
 import pandas as pd
-from sklearn import preprocessing
-from sklearn import model_selection
-from sklearn import linear_model
+import os
 
-start = dt.datetime(2008, 6, 1)
-end = dt.datetime(2018, 6, 1)
+# Set the start and end date of the experiment 
+start_ = dt.datetime(2014, 6, 8)
+end_ = dt.datetime(2019, 6, 17)
+
+# Directory where the data (csvs) are, be sure to change to match your personal directory
+dir_ = "C:\\Users\\137610\\OneDrive - Hitachi Consulting\\Core Connect\\Data"
+
+# Global counter to sort through stock data files
+file_counter_ = 1
+
+# Change the working directory to where the data sits
+os.chdir(dir_)
+
+# Loop through the directory to ingest each file
+for file_ in os.listdir(dir_):
+    # Read the csv
+    df_stocks_temp_ = pd.read_csv(file_)
+    # Grab the ticker
+    df_stocks_temp_['Ticker'] = file_.split(".")[0]
+    # If it's the first file populate dataframe 
+    if file_counter_ == 1:
+        df_stocks_ = df_stocks_temp_
+    # Else append dataframe
+    else:
+        df_stocks_ = df_stocks_.append(df_stocks_temp_)
+    # Clear temp dataframe
+    df_stocks_temp_ = df_stocks_temp_.iloc[0:0]
+
+    # Increment file count
+    file_counter_ += 1
+
+# Reset the dataframe index
+df_stocks_ = df_stocks_.set_index(['Date','Ticker'])
+# Sort dataframe by date
+df_stocks_ = df_stocks_.sort_values('Date')
 
 df = web.get_data_yahoo('AAPL', start=start, end=end)
 #print(df.tail())
