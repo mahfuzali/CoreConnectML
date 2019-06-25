@@ -77,6 +77,8 @@ for file_ in os.listdir(dir_):
         atr_counter_ += 1
 
     # Drop TR Column here
+    # Calculate RSI here 
+    # Calculate Parabolic SAR here
 
     
     # If the master data frame is being initialized then populate
@@ -98,7 +100,7 @@ df_stocks_ = df_stocks_.sort_values('Date')
 
 
 df = web.get_data_yahoo('AAPL', start=start, end=end)
-#print(df.tail())
+
 
 def prepare_data(df, forecast_col, forecast_out, test_size):
     label = df[forecast_col].shift(-forecast_out); #creating new column called label with the last 5 rows are nan
