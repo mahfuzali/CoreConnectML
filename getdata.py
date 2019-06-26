@@ -77,10 +77,16 @@ for file_ in os.listdir(dir_):
         atr_counter_ += 1
 
     # Drop TR Column here
+
+    df_stocks_temp_.drop(['TR'])
+    
     # Calculate RSI here 
+
+
+
     # Calculate Parabolic SAR here
 
-    
+
     # If the master data frame is being initialized then populate
     if file_counter_ == 1:
         df_stocks_ = df_stocks_temp_
