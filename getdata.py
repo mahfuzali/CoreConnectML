@@ -13,7 +13,7 @@ start_ = dt.datetime(2014, 6, 8)
 end_ = dt.datetime(2019, 6, 17)
 
 # Directory where the data (csvs) are, be sure to change to match your personal directory
-dir_ = "C:\\Users\\137610\\OneDrive - Hitachi Consulting\\Core Connect\\Data"
+dir_ = "C:\\Users\\138035\\Documents\\Projects\\Core Connect\\Data"
 
 # Global counter to sort through stock data files
 file_counter_ = 1
