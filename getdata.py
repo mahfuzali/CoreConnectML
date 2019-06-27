@@ -1,3 +1,4 @@
+import functions as f
 from pandas_datareader import data as web
 from sklearn import preprocessing
 from sklearn import model_selection
@@ -21,24 +22,6 @@ file_counter_ = 1
 # Change the working directory to where the data sits
 os.chdir(dir_)
 
-# Function to calculate the True Range in each row
-def calc_tr_(row):
-
-    high_ = row['High']
-    low_ = row['Low']
-    open_ = row['Open']
-    close_ = row['Close']
-    volume_ = row['Volume']
-    prev_close_ = row['Prev Close']
-
-    max_1_ = high_ - low_
-    max_2_ = abs(high_ - prev_close_)
-    max_3_ = abs(low_- prev_close_)
-
-    TR_ = max(max_1_,max_2_,max_3_)
-
-    return TR_
-
 # Loop through the directory to ingest each file
 for file_ in os.listdir(dir_):
     # Read the csv
@@ -48,42 +31,25 @@ for file_ in os.listdir(dir_):
     # Populate the previous close
     df_stocks_temp_['Prev Close'] = df_stocks_temp_['Close'].shift(1)
     # Calculate the True Range for each row for the ATR calculation
-    df_stocks_temp_['TR'] = df_stocks_temp_.apply(calc_tr_,axis=1)
-    # Create increment for ATR calculation
-    atr_counter_ = 1
-    # Find the length of the TR column then find how many iterations of 14 days 
-    length_atr_ = len(df_stocks_temp_['TR'])
-    iterations_ = length_atr_%14
-
-    # For loop to grab frames of TR data
-    for i in range(0,iterations_):
-        # Grab TR data in increments of 14
-        df_temp_atr_ = df_stocks_temp_['TR'][(atr_counter_-1)*14:atr_counter_*14]
-        # Length of values to iterate and calculate over
-        length_df_temp_atr_ = len(df_temp_atr_)
-        # Loop to Calculate ATR
-        for j in range(0,length_df_temp_atr_):
-            # Grab the True Range value
-            ATR_temp_ = df_temp_atr_[((atr_counter_-1)*14)+j]
-            # If the value is being initializated then populate
-            if i == 0:
-                ATR_ = ATR_temp_
-            # If past initialization then add the TR values for the iterable period
-            else:
-                ATR_ = ATR_ + ATR_temp_
-        # Populate the master data frame with the ATR values for the respective stock 
-        df_stocks_temp_['ATR'] = ATR_
-        # Increment ATR Counter 
-        atr_counter_ += 1
-
-    # Drop TR Column here
-
-    df_stocks_temp_.drop(['TR'])
-    
+    df_stocks_temp_['TR'] = df_stocks_temp_.apply(f.calc_true_range_,axis=1)
+    # Calculate the ATR
+    df_stocks_temp_['ATR'] = df_stocks_temp_['TR'].ewm(span=14).mean()
+    # Drop the TR column
+    df_stocks_temp_.drop(['TR'],axis = 1)
     # Calculate RSI here 
+    df_delta_= df_stocks_temp_['Close'].diff()
+    df_dUp_, df_dDown_ = df_delta_.copy(),df_delta_.copy()
+    df_dUp_[df_delta_<0] = 0
+    df_dDown_[df_delta_>0] = 0
 
+    roll_up_ = df_dUp_.rolling(14).mean()
+    roll_down_ = df_dDown_.rolling(14).mean().abs()
 
+    RS_ = roll_up_/roll_down_
 
+    RSI_ = 100.0 - (100.0 / (1.0 + RS_))
+
+    df_stocks_temp_['RIS'] = RSI_
     # Calculate Parabolic SAR here
 
 

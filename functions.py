@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import os
 
-def calc_tr_(row):
+def calc_true_range_(row):
 
     high_ = row['High']
     low_ = row['Low']
