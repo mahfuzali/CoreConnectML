@@ -13,8 +13,45 @@ import os
 start_ = dt.datetime(2014, 6, 8)
 end_ = dt.datetime(2019, 6, 17)
 
+# Function to calculate th True Range of the stock
+def calc_true_range_(row):
+
+    high_ = row['High']
+    low_ = row['Low']
+    open_ = row['Open']
+    close_ = row['Close']
+    volume_ = row['Volume']
+    prev_close_ = row['Prev Close']
+
+    max_1_ = high_ - low_
+    max_2_ = abs(high_ - prev_close_)
+    max_3_ = abs(low_- prev_close_)
+
+    TR_ = max(max_1_,max_2_,max_3_)
+
+    return TR_
+
+def calculate_parabolic_SAR(data):
+
+    lenght_df_ = len(data)
+    high_ = data['High']
+    low_ = data["Low"]
+    close_ = data["Close"]
+    open_ = data['Open']
+    df_psar_ = close_[0:len(close_)]
+    psarbull_ = [none] * lenght_df_
+    psarbear_ = [none] * lenght_df_
+    bull_ = True
+    ep_ = low_[0]
+    hp_ = high_[0]
+    lp_ = low[0]
+
+    
+
+
+
 # Directory where the data (csvs) are, be sure to change to match your personal directory
-dir_ = "C:\\Users\\138035\\Documents\\Projects\\Core Connect\\Data"
+dir_ = "C:\\Users\\137610\\OneDrive - Hitachi Consulting\\Core Connect\\Data"
 
 # Global counter to sort through stock data files
 file_counter_ = 1
@@ -69,9 +106,6 @@ for file_ in os.listdir(dir_):
 df_stocks_ = df_stocks_.set_index(['Date','Ticker'])
 # Sort dataframe by date
 df_stocks_ = df_stocks_.sort_values('Date')
-
-
-df = web.get_data_yahoo('AAPL', start=start, end=end)
 
 
 def prepare_data(df, forecast_col, forecast_out, test_size):
