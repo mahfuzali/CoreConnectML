@@ -8,6 +8,7 @@ import math
 import numpy as np 
 import pandas as pd
 import os
+import tensorflow as tf
 
 # Set the start and end date of the experiment 
 start_ = dt.datetime(2014, 6, 8)
@@ -31,22 +32,27 @@ def calc_true_range_(row):
 
     return TR_
 
-def calculate_parabolic_SAR(data):
+# def calculate_parabolic_SAR(data):
 
-    lenght_df_ = len(data)
-    high_ = data['High']
-    low_ = data["Low"]
-    close_ = data["Close"]
-    open_ = data['Open']
-    df_psar_ = close_[0:len(close_)]
-    psarbull_ = [none] * lenght_df_
-    psarbear_ = [none] * lenght_df_
-    bull_ = True
-    ep_ = low_[0]
-    hp_ = high_[0]
-    lp_ = low[0]
+#     lenght_df_ = len(data)
+#     high_ = data['High']
+#     low_ = data["Low"]
+#     close_ = data["Close"]
+#     open_ = data['Open']
+#     df_psar_ = close_[0:len(close_)]
+#     psarbull_ = [none] * lenght_df_
+#     psarbear_ = [none] * lenght_df_
+#     bull_ = True
+#     iaf_ = .02
+#     maxaf_ = .2
+#     af = iaf
+#     ep_ = low_[0]
+#     hp_ = high_[0]
+#     lp_ = low[0]
 
-    
+#     for i in range(2,lenght_df_):
+#         if bull_:
+#             df_psar_[i] = df_psar_[i - 1] + af * (hp - df_psar_[i - 1])
 
 
 
@@ -68,15 +74,20 @@ for file_ in os.listdir(dir_):
     # Populate the previous close
     df_stocks_temp_['Prev Close'] = df_stocks_temp_['Close'].shift(1)
     # Calculate the True Range for each row for the ATR calculation
+    df_stocks_temp_['Prev Close'] = df_stocks_temp_['Prev Close'].fillna(method='bfill')
     df_stocks_temp_['TR'] = df_stocks_temp_.apply(f.calc_true_range_,axis=1)
     # Calculate the ATR
     df_stocks_temp_['ATR'] = df_stocks_temp_['TR'].ewm(span=14).mean()
     # Drop the TR column
-    df_stocks_temp_.drop(['TR'],axis = 1)
+    df_stocks_temp_.drop(['TR'], axis = 1)
     # Calculate RSI here 
+    # Calculate the difference between the close prices
     df_delta_= df_stocks_temp_['Close'].diff()
+    # Copy the delta to two different data frames
     df_dUp_, df_dDown_ = df_delta_.copy(),df_delta_.copy()
+    # Find those deltas less than zero and drop then 
     df_dUp_[df_delta_<0] = 0
+    # find those deltas greater than zerp and drop them
     df_dDown_[df_delta_>0] = 0
 
     roll_up_ = df_dUp_.rolling(14).mean()
@@ -86,9 +97,9 @@ for file_ in os.listdir(dir_):
 
     RSI_ = 100.0 - (100.0 / (1.0 + RS_))
 
-    df_stocks_temp_['RIS'] = RSI_
-    # Calculate Parabolic SAR here
+    df_stocks_temp_['RSI'] = RSI_
 
+    df_stocks_temp_['RSI'] = df_stocks_temp_['RSI'].fillna(method='bfill')
 
     # If the master data frame is being initialized then populate
     if file_counter_ == 1:
@@ -107,56 +118,33 @@ df_stocks_ = df_stocks_.set_index(['Date','Ticker'])
 # Sort dataframe by date
 df_stocks_ = df_stocks_.sort_values('Date')
 
+# Spilt the data in 80% / 10% / 10% to train / validate / test
+valid_percentage_ = .1
+test_percentage_ = .1
+train_percentage_ = .8
 
-def prepare_data(df, forecast_col, forecast_out, test_size):
-    label = df[forecast_col].shift(-forecast_out); #creating new column called label with the last 5 rows are nan
-    X = np.array(df[[forecast_col]]); #creating the feature array
-    X = preprocessing.scale(X) #processing the feature array
-    X_lately = X[-forecast_out:] #creating the column i want to use later in the predicting method
-    X = X[:-forecast_out] # X that will contain the training and testing
-    label.dropna(inplace=True); #dropping na values
-    y = np.array(label)  # assigning Y
-    X_train, X_test, Y_train, Y_test = model_selection.train_test_split(X, y, test_size=test_size) #cross validation 
+# Get all the unique tickers 
+unique_stocks_ = df_stocks_.index.levels[1]
 
-    response = [X_train, X_test , Y_train, Y_test, X_lately]
-    return response
+#df_stocks_.to_csv("Test.csv", index = True)
 
+for stock_ in unique_stocks_:
+    df_data_ = df_stocks_[df_stocks_.index.get_level_values(1) == stock_]
 
-forecast_col = 'Adj Close'#choosing which column to forecast
-forecast_out = 14 #how far to forecast 
-test_size = 0.3; #the size of my test set
+    predict_x_ = df_data_['Close'].values.reshape(1,-1)
 
-X_train, X_test, Y_train, Y_test , X_lately = prepare_data(df, forecast_col, forecast_out, test_size); #calling the method were the cross validation and data preperation is in
+    train_, validate_, test_ = np.split(df_data_.sample(frac=1), [int(.6*len(df_data_)), int(.8*len(df_data_))])
 
-learner = linear_model.LinearRegression(); #initializing linear regression model
+    train_x_ = train_['RSI'].values.reshape(1,-1)
+    train_y_ = train_['Close'].values.reshape(1,-1)
 
-learner.fit(X_train,Y_train); #training the linear regression model
-score = learner.score(X_test,Y_test); #testing the linear regression model
+    learner = linear_model.LinearRegression()#initializing linear regression model
 
-forecast = learner.predict(X_lately); #set that will contain the forecasted data
+    learner.fit(train_x_,train_y_); #training the linear regression model
+    score = learner.score(train_x_,train_y_); #testing the linear regression model
 
+    forecast = learner.predict(predict_x_); #set that will contain the forecasted data
 
-def workdays(d, count, excluded=(6, 7)):
-    days = []
-    numberofday = 0
-    while numberofday < count:
-        if d.isoweekday() not in excluded:
-            days.append(d)
-            numberofday += 1 
-        d += dt.timedelta(days=1)
-    return days
+    print(predict_x_)
 
-end_date = end + dt.timedelta(days=1)
-list_date = workdays(end_date, 14)
-date_list = [dt.datetime.strftime(i, "%Y-%m-%d") for i in list_date]
-
-predicted = pd.DataFrame(forecast, date_list, columns =['Predicted Adj Close']) 
-
-p_start = list_date[0]
-p_end = list_date[len(list_date) - 1]
-new_df = web.get_data_yahoo('AAPL', start=p_start, end=p_end)
-print(new_df)
-
-predicted['Actual Adj Close'] = new_df['Adj Close']
-print(predicted)
 
