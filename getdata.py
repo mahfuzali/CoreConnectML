@@ -14,6 +14,9 @@ from sklearn.metrics import r2_score
 start_ = dt.datetime(2014, 6, 8)
 end_ = dt.datetime(2019, 6, 17)
 
+# Supress max figure creation warning
+plot.rcParams.update({'figure.max_open_warning': 0})
+
 # Function to calculate th True Range of the stock
 def calc_true_range_(row):
 
@@ -67,51 +70,52 @@ os.chdir(dir_)
 
 # Loop through the directory to ingest each file
 for file_ in os.listdir(dir_):
-    # Read the csv
-    df_stocks_temp_ = pd.read_csv(file_)
-    # Grab the ticker
-    df_stocks_temp_['Ticker'] = file_.split(".")[0]
-    # Populate the previous close
-    df_stocks_temp_['Prev Close'] = df_stocks_temp_['Close'].shift(1)
-    # Calculate the True Range for each row for the ATR calculation
-    df_stocks_temp_['Prev Close'] = df_stocks_temp_['Prev Close'].fillna(method='bfill')
-    df_stocks_temp_['TR'] = df_stocks_temp_.apply(calc_true_range_,axis=1)
-    # Calculate the ATR
-    df_stocks_temp_['ATR'] = df_stocks_temp_['TR'].ewm(span=14).mean()
-    # Drop the TR column
-    df_stocks_temp_.drop(['TR'], axis = 1)
-    # Calculate RSI here 
-    # Calculate the difference between the close prices
-    df_delta_= df_stocks_temp_['Close'].diff()
-    # Copy the delta to two different data frames
-    df_dUp_, df_dDown_ = df_delta_.copy(),df_delta_.copy()
-    # Find those deltas less than zero and drop then 
-    df_dUp_[df_delta_<0] = 0
-    # find those deltas greater than zerp and drop them
-    df_dDown_[df_delta_>0] = 0
+    if file_.endswith('.csv'):
+        # Read the csv
+        df_stocks_temp_ = pd.read_csv(file_)
+        # Grab the ticker
+        df_stocks_temp_['Ticker'] = file_.split(".")[0]
+        # Populate the previous close
+        df_stocks_temp_['Prev Close'] = df_stocks_temp_['Close'].shift(1)
+        # Calculate the True Range for each row for the ATR calculation
+        df_stocks_temp_['Prev Close'] = df_stocks_temp_['Prev Close'].fillna(method='bfill')
+        df_stocks_temp_['TR'] = df_stocks_temp_.apply(calc_true_range_,axis=1)
+        # Calculate the ATR
+        df_stocks_temp_['ATR'] = df_stocks_temp_['TR'].ewm(span=14).mean()
+        # Drop the TR column
+        df_stocks_temp_.drop(['TR'], axis = 1)
+        # Calculate RSI here 
+        # Calculate the difference between the close prices
+        df_delta_= df_stocks_temp_['Close'].diff()
+        # Copy the delta to two different data frames
+        df_dUp_, df_dDown_ = df_delta_.copy(),df_delta_.copy()
+        # Find those deltas less than zero and drop then 
+        df_dUp_[df_delta_<0] = 0
+        # find those deltas greater than zerp and drop them
+        df_dDown_[df_delta_>0] = 0
 
-    roll_up_ = df_dUp_.rolling(14).mean()
-    roll_down_ = df_dDown_.rolling(14).mean().abs()
+        roll_up_ = df_dUp_.rolling(14).mean()
+        roll_down_ = df_dDown_.rolling(14).mean().abs()
 
-    RS_ = roll_up_/roll_down_
+        RS_ = roll_up_/roll_down_
 
-    RSI_ = 100.0 - (100.0 / (1.0 + RS_))
+        RSI_ = 100.0 - (100.0 / (1.0 + RS_))
 
-    df_stocks_temp_['RSI'] = RSI_
+        df_stocks_temp_['RSI'] = RSI_
 
-    df_stocks_temp_['RSI'] = df_stocks_temp_['RSI'].fillna(method='bfill')
+        df_stocks_temp_['RSI'] = df_stocks_temp_['RSI'].fillna(method='bfill')
 
-    # If the master data frame is being initialized then populate
-    if file_counter_ == 1:
-        df_stocks_ = df_stocks_temp_
-    # Else append dataframe
-    else:
-        df_stocks_ = df_stocks_.append(df_stocks_temp_)
-    # Clear temp dataframe
-    df_stocks_temp_ = df_stocks_temp_.iloc[0:0]
+        # If the master data frame is being initialized then populate
+        if file_counter_ == 1:
+            df_stocks_ = df_stocks_temp_
+        # Else append dataframe
+        else:
+            df_stocks_ = df_stocks_.append(df_stocks_temp_)
+        # Clear temp dataframe
+        df_stocks_temp_ = df_stocks_temp_.iloc[0:0]
 
-    # Increment file count
-    file_counter_ += 1
+        # Increment file count
+        file_counter_ += 1
 
 # Reset the dataframe index
 df_stocks_ = df_stocks_.set_index(['Date','Ticker'])
@@ -145,7 +149,9 @@ for stock_ in unique_stocks_:
     ax2_.plot(df_data_['Date'],df_data_['Close'],color='blue')
 
     fig.tight_layout()
-    plot.show()
+    dir_ = 'C:\\Users\\137610\\OneDrive - Hitachi Consulting\\Core Connect\\Data\\Charts'
+    os.chdir(dir_)
+    plot.savefig(ticker_+'_ATR.png')
 
     x_train_,x_test_,y_train_,y_test_ = train_test_split(x_,y_, test_size =.5)
 
@@ -157,8 +163,7 @@ for stock_ in unique_stocks_:
 
     df_data_['Prediction_ATR'] = prediction_
 
-    print(LinearRegressor_.score(x_.values.reshape(-1,1),y_.values.reshape(-1,1)))
-
+    print(ticker_+" ATR R2 Score = ",LinearRegressor_.score(x_.values.reshape(-1,1),y_.values.reshape(-1,1)))
 
     x_ = df_data_['RSI']
     y_ = df_data_['Close']
@@ -175,7 +180,7 @@ for stock_ in unique_stocks_:
     ax2_.plot(df_data_['Date'],df_data_['Close'],color='blue')
 
     fig.tight_layout()
-    plot.show()
+    plot.savefig(ticker_+'_RSI.png')
 
     x_train_,x_test_,y_train_,y_test_ = train_test_split(x_,y_, test_size =.5)
 
@@ -187,13 +192,13 @@ for stock_ in unique_stocks_:
 
     df_data_['Prediction_RSI'] = prediction_
 
-    print(LinearRegressor_.score(x_.values.reshape(-1,1),y_.values.reshape(-1,1)))
+    print(ticker_+" RSI R2 Score = ",LinearRegressor_.score(x_.values.reshape(-1,1),y_.values.reshape(-1,1)))
+
+    dir_ = 'C:\\Users\\137610\\OneDrive - Hitachi Consulting\\Core Connect\\Data\\Outputs'
+    os.chdir(dir_)
 
     df_data_.to_csv(ticker_+"_output.csv", index = True)
 
-
-
-    break
 
    
 
