@@ -1,5 +1,4 @@
-import functions as f
-from pandas_datareader import data as web
+import matplotlib.pyplot as plot
 from sklearn import preprocessing
 from sklearn import model_selection
 from sklearn import linear_model
@@ -8,7 +7,8 @@ import math
 import numpy as np 
 import pandas as pd
 import os
-import tensorflow as tf
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
 
 # Set the start and end date of the experiment 
 start_ = dt.datetime(2014, 6, 8)
@@ -75,7 +75,7 @@ for file_ in os.listdir(dir_):
     df_stocks_temp_['Prev Close'] = df_stocks_temp_['Close'].shift(1)
     # Calculate the True Range for each row for the ATR calculation
     df_stocks_temp_['Prev Close'] = df_stocks_temp_['Prev Close'].fillna(method='bfill')
-    df_stocks_temp_['TR'] = df_stocks_temp_.apply(f.calc_true_range_,axis=1)
+    df_stocks_temp_['TR'] = df_stocks_temp_.apply(calc_true_range_,axis=1)
     # Calculate the ATR
     df_stocks_temp_['ATR'] = df_stocks_temp_['TR'].ewm(span=14).mean()
     # Drop the TR column
@@ -118,11 +118,6 @@ df_stocks_ = df_stocks_.set_index(['Date','Ticker'])
 # Sort dataframe by date
 df_stocks_ = df_stocks_.sort_values('Date')
 
-# Spilt the data in 80% / 10% / 10% to train / validate / test
-valid_percentage_ = .1
-test_percentage_ = .1
-train_percentage_ = .8
-
 # Get all the unique tickers 
 unique_stocks_ = df_stocks_.index.levels[1]
 
@@ -130,21 +125,77 @@ unique_stocks_ = df_stocks_.index.levels[1]
 
 for stock_ in unique_stocks_:
     df_data_ = df_stocks_[df_stocks_.index.get_level_values(1) == stock_]
+    df_data_ = df_data_.reset_index()
+    df_data_['Date'] = pd.to_datetime(df_data_['Date'])
+    df_data_['Ticker'] = df_data_['Ticker'].astype(str)
+    ticker_ = str(df_data_['Ticker'][0])
 
-    predict_x_ = df_data_['Close'].values.reshape(1,-1)
+    x_ = df_data_['ATR']
+    y_ = df_data_['Close']
 
-    train_, validate_, test_ = np.split(df_data_.sample(frac=1), [int(.6*len(df_data_)), int(.8*len(df_data_))])
+    fig, ax1_ = plot.subplots()
+    ax1_.set_xlabel('Year')
+    ax1_.set_ylabel('ATR')
+    ax1_.plot(df_data_['Date'],df_data_['ATR'],color='red')
+    ax1_.set_title(ticker_)
 
-    train_x_ = train_['RSI'].values.reshape(1,-1)
-    train_y_ = train_['Close'].values.reshape(1,-1)
+    ax2_ = ax1_.twinx()
 
-    learner = linear_model.LinearRegression()#initializing linear regression model
+    ax2_.set_ylabel('Close')
+    ax2_.plot(df_data_['Date'],df_data_['Close'],color='blue')
 
-    learner.fit(train_x_,train_y_); #training the linear regression model
-    score = learner.score(train_x_,train_y_); #testing the linear regression model
+    fig.tight_layout()
+    plot.show()
 
-    forecast = learner.predict(predict_x_); #set that will contain the forecasted data
+    x_train_,x_test_,y_train_,y_test_ = train_test_split(x_,y_, test_size =.5)
 
-    print(predict_x_)
+    LinearRegressor_ = linear_model.LinearRegression()
+
+    LinearRegressor_.fit(x_.values.reshape(-1,1),y_.values.reshape(-1,1))
+
+    prediction_ = LinearRegressor_.predict(x_.values.reshape(-1,1))
+
+    df_data_['Prediction_ATR'] = prediction_
+
+    print(LinearRegressor_.score(x_.values.reshape(-1,1),y_.values.reshape(-1,1)))
+
+
+    x_ = df_data_['RSI']
+    y_ = df_data_['Close']
+
+    fig, ax1_ = plot.subplots()
+    ax1_.set_xlabel('Year')
+    ax1_.set_ylabel('RSI')
+    ax1_.plot(df_data_['Date'],df_data_['RSI'],color='red')
+    ax1_.set_title(ticker_)
+
+    ax2_ = ax1_.twinx()
+
+    ax2_.set_ylabel('Close')
+    ax2_.plot(df_data_['Date'],df_data_['Close'],color='blue')
+
+    fig.tight_layout()
+    plot.show()
+
+    x_train_,x_test_,y_train_,y_test_ = train_test_split(x_,y_, test_size =.5)
+
+    LinearRegressor_ = linear_model.LinearRegression()
+
+    LinearRegressor_.fit(x_.values.reshape(-1,1),y_.values.reshape(-1,1))
+
+    prediction_ = LinearRegressor_.predict(x_.values.reshape(-1,1))
+
+    df_data_['Prediction_RSI'] = prediction_
+
+    print(LinearRegressor_.score(x_.values.reshape(-1,1),y_.values.reshape(-1,1)))
+
+    df_data_.to_csv(ticker_+"_output.csv", index = True)
+
+
+
+    break
+
+   
+
 
 
